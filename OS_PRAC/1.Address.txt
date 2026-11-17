@@ -1,238 +1,179 @@
+#!/bin/bash
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-
-void sort(int a[], int n)
+create()
 {
-    int i, j, temp;
-
-    for(i = 0; i < n-1; i++)
-    {
-        for(j = 0; j < n-i-1; j++)
-        {
-            if(a[j] > a[j+1])
-            {
-                temp = a[j];
-                a[j] = a[j+1];
-                a[j+1] = temp;
-            }
-        }
-    }
+    touch "addressbook.txt"
+    echo "Address book file created successfully."
 }
 
-void display(int a[], int n)
+insert()
 {
-    int i;
-    for(i = 0; i < n; i++)
-        printf("%d ", a[i]);
-    printf("\n");
+    echo "Enter name:"
+    read name
+    echo "Enter phone_no:"
+    read phone_no
+    echo "Enter address:"
+    read address
+    echo "$name | $phone_no | $address" >> addressbook.txt
+    echo "Record inserted successfully."
 }
 
-int main()
+view()
 {
-    int a[50], n, i;
-    pid_t pid;
-
-    printf("Enter number of integers: ");
-    scanf("%d", &n);
-
-    printf("Enter integers:\n");
-    for(i = 0; i < n; i++)
-        scanf("%d", &a[i]);
-
-    pid = fork();
-
-    if(pid < 0)
-    {
-        printf("Fork failed.\n");
-        exit(1);
-    }
-
-    else if(pid == 0)
-    {
-        printf("\nChild Process\n");
-        printf("Child PID: %d\n", getpid());
-
-        sort(a, n);
-
-        printf("Sorted array by child: ");
-        display(a, n);
-
-        printf("Child process completed.\n");
-        exit(0);
-    }
-
+    if [ -f "addressbook.txt" ]; then
+        echo "--- Address Book Records ---"
+        cat addressbook.txt
+        echo "----------------------------"
     else
-    {
-        printf("\nParent Process\n");
-        printf("Parent PID: %d\n", getpid());
-
-        sort(a, n);
-
-        printf("Sorted array by parent: ");
-        display(a, n);
-
-        wait(NULL);
-
-        printf("Parent: Child process completed.\n");
-    }
-
-    return 0;
+        echo "Address book file does not exist yet. Please create it first."
+    fi
 }
 
-```
-
-## **2. Program to Demonstrate Zombie Process**
-
-A zombie process is a process that has completed execution, but its parent has not yet collected its exit status using `wait()`.
-
-```
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-int main()
+modify()
 {
-    pid_t pid = fork();
-
-    if(pid == 0)
-    {
-        printf("Child process terminated.\n");
-        exit(0);
-    }
-    else if(pid > 0)
-    {
-        printf("Parent PID: %d\n", getpid());
-        printf("Child PID: %d\n", pid);
-        printf("Zombie state can be observed now.\n");
-
-        sleep(20);
-        printf("Parent exiting.\n");
-    }
-
-    return 0;
+    echo "Enter name that you want to modify:"
+    read name
+    
+    if [ -f "addressbook.txt" ]; then
+        grep -v "^$name |" addressbook.txt > addressbook1.txt
+        cp addressbook1.txt addressbook.txt
+        rm addressbook1.txt
+        
+        echo "Enter new name:"
+        read name
+        echo "Enter new phone_no:"
+        read phone_no
+        echo "Enter new address:"
+        read address
+        echo "$name | $phone_no | $address" >> addressbook.txt
+        echo "Record modified successfully."
+    else
+        echo "Address book file does not exist."
+    fi
 }
 
-```
-
-**To observe zombie state:**
-
-Run the program in one terminal and quickly execute in another terminal:
-
-```
-ps -el | grep Z
-```
-
-The child process may appear with state `Z` during the parent's 20-second sleep.
-
-## **3. Program to Demonstrate Orphan Process**
-
-An orphan process is a child process whose parent terminates before the child process finishes execution. It is adopted by the system's init process or another subreaper.
-
-```
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-int main()
+delete()
 {
-    pid_t pid = fork();
-
-    if(pid == 0)
-    {
-        printf("Child process started.\n");
-        printf("Original Parent PID: %d\n", getppid());
-
-        sleep(5);
-
-        printf("Child is now an orphan.\n");
-        printf("New Parent PID: %d\n", getppid());
-    }
-    else if(pid > 0)
-    {
-        printf("Parent process started.\n");
-        printf("Parent PID: %d\n", getpid());
-
-        sleep(2);
-        printf("Parent process exiting.\n");
-        exit(0);
-    }
-
-    return 0;
+    echo "Enter name that you want to delete:"
+    read name
+    
+    if [ -f "addressbook.txt" ]; then
+        sed -i "/^$name /d" addressbook.txt
+        echo "Record deleted successfully."
+    else
+        echo "Address book file does not exist."
+    fi
 }
-
-```
-
-## **4. Practical Write-up**
-
-**1. Title:**
-
-Demonstration of FORK and WAIT System Calls Along with Zombie and Orphan Processes.
-
-**2. Aim:**
-
-To implement process management using `fork()` and `wait()` system calls and demonstrate zombie and orphan processes in C.
-
-**3. Objectives:**
-
-1. To understand process creation using the `fork()` system call.
-2. To implement process synchronization using the `wait()` system call.
-3. To understand the concept and behaviour of zombie processes.
-4. To understand the concept and behaviour of orphan processes.
-
-**4. Theory:**
-
-Process management is an important function of an operating system that handles the creation, execution and termination of processes. In Linux, system calls are used to perform process-related operations.
-
-**1. fork() System Call:**
-
-The `fork()` system call creates a new process called the child process from the existing parent process. Both processes execute independently.
-
-Syntax:
-
-```
-pid_t pid = fork();
-```
-
-Return values:
-
-- `0` – Returned to the child process.
-- Positive value – Returned to the parent process (child PID).
-- `-1` – Process creation failed.
-
-**2. wait() System Call:**
-
-The `wait()` system call makes the parent process wait until one of its child processes terminates. It helps in process synchronization and collecting the child's exit status.
-
-Syntax:
-
-```
-wait(NULL);
-```
-
-**3. Zombie Process:**
-
-A zombie process is a process that has completed its execution, but its parent has not collected its termination status using `wait()`. It remains in the process table until its exit status is collected.
-
-**4. Orphan Process:**
-
-An orphan process is a child process whose parent terminates before the child completes execution. The orphan process is adopted by the init process (PID 1) or another system subreaper.
-
-**5. Sorting Algorithm:**
-
-The program uses the Bubble Sort algorithm to arrange integers in ascending order. It repeatedly compares adjacent elements and swaps them if they are in the wrong order.
-
-**5. Conclusion:**
-
-Thus, process management was successfully implemented using `fork()` and `wait()` system calls. The creation of parent and child processes and the concepts of zombie and orphan processes were demonstrated successfully.
+choice=0
+while [ $choice -lt 6 ]
+do
+    echo ""
+    echo "1. create"
+    echo "2. insert"
+    echo "3. view"
+    echo "4. modify"
+    echo "5. delete"
+    echo "6. exit"
+    echo "Enter Your Choice:"
+    read choice
+    
+    case $choice in
+        1) 
+            echo "create file"
+            create 
+            ;;
+        2) 
+            echo "insert"
+            insert
+            ;;
+        3) 
+            echo "view"
+            view
+            ;;
+        4) 
+            echo "modify"
+            modify 
+            ;;
+        5) 
+            echo "delete"
+            delete 
+            ;;
+        6) 
+            echo "exit"
+            exit 0
+            ;;
+        *) 
+            echo "Invalid choice. Please enter a number between 1 and 6." 
+            ;;
+    esac
+done
 
 
-```
-gcc process.c -o process
-./process
-```
+
+1. Title:
+
+Implementation of Address Book Using Shell Programming.
+
+2. Aim:
+
+To write a shell script to implement an address book with options to create, view, insert, delete and modify records.
+
+3. Objectives:
+1. To understand basic shell scripting concepts.
+2. To perform file handling operations using shell commands.
+3. To insert, delete and modify address book records.
+4. To implement menu-driven programming using the case statement.
+
+4. Theory:
+Shell programming is a scripting language used to automate tasks in a Linux operating system. A shell script is a collection of commands written in a file and executed by the shell interpreter. It helps users perform multiple operations efficiently without executing commands individually.
+
+An Address Book Management System is a menu-driven shell program used to store and manage personal contact information such as name, phone number and address. In this program, a text file (addressbook.txt) is used to store records permanently.
+
+The program uses a while loop to repeatedly display the menu until the user selects the Exit option. The case statement is used to execute the operation according to the user's choice.
+
+Operations performed:
+1. Create Address Book: Creates a new text file or clears the existing file using the > operator.
+2. View Address Book: Displays all stored records using the cat command.
+3. Insert Record: Accepts the user's name, phone number and address and stores them using the >> operator.
+4. Delete Record: Searches for a particular name using grep and removes the matching record.
+5. Modify Record: Removes the existing record and inserts the updated information.
+6. Exit: Terminates the program using the exit command.
+Important Shell Commands and Syntax:
+Command	Purpose
+read	Accepts input from the user.
+echo	Displays output on the screen.
+while	Repeats statements until the condition becomes false.
+case	Performs operations based on user choice.
+cat	Displays file contents.
+grep	Searches for specific text in a file.
+mv	Moves or renames a file.
+>	Creates or overwrites a file.
+>>	Appends data to a file.
+
+Syntax of while loop:
+while [ condition ]
+do
+    statements
+done
+
+
+Syntax of case statement:
+case variable in
+    1)
+        statements
+        ;;
+    2)
+        statements
+        ;;
+    *)
+        statements
+        ;;
+esac
+
+5. Conclusion:
+
+Thus, the address book was successfully implemented using shell programming. It performs create, view, insert, delete and modify operations using file handling and menu-driven concepts.
+
+
+code
+address.sh
