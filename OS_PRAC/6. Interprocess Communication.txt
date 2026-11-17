@@ -13,21 +13,24 @@ Save this program as `fifo.c`.
 
 ```
 
-#include <sys/wait.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 int main()
 {
     int fd1, fd2;
     char sentence[1000];
     char result[500];
+
     int characters = 0, words = 0, lines = 0;
     int in_word = 0;
+    int last_char = '\n';
 
     mkfifo("fifo1", 0666);
     mkfifo("fifo2", 0666);
@@ -35,17 +38,18 @@ int main()
     if(fork() == 0)
     {
         // Second Process
+
         fd1 = open("fifo1", O_RDONLY);
 
         FILE *fp = fopen("output.txt", "w");
 
-        while(read(fd1, sentence, sizeof(sentence)) > 0)
+        ssize_t n;
+
+        while((n = read(fd1, sentence, sizeof(sentence))) > 0)
         {
-            int len = strlen(sentence);
+            characters += n;
 
-            characters += len;
-
-            for(int i = 0; i < len; i++)
+            for(int i = 0; i < n; i++)
             {
                 if(sentence[i] == '\n')
                     lines++;
@@ -57,10 +61,15 @@ int main()
                     words++;
                     in_word = 1;
                 }
+
+                last_char = sentence[i];
             }
         }
 
         close(fd1);
+
+        if(characters > 0 && last_char != '\n')
+            lines++;
 
         fprintf(fp, "Characters: %d\n", characters);
         fprintf(fp, "Words: %d\n", words);
@@ -69,10 +78,13 @@ int main()
         fclose(fp);
 
         fp = fopen("output.txt", "r");
+
         fd2 = open("fifo2", O_WRONLY);
 
         while(fgets(result, sizeof(result), fp))
+        {
             write(fd2, result, strlen(result));
+        }
 
         close(fd2);
         fclose(fp);
@@ -82,6 +94,7 @@ int main()
     else
     {
         // First Process
+
         fd1 = open("fifo1", O_WRONLY);
 
         printf("Enter sentences (type END to finish):\n");
@@ -90,8 +103,8 @@ int main()
         {
             fgets(sentence, sizeof(sentence), stdin);
 
-            if(strncmp(sentence, "END", 3) == 0 &&
-               (sentence[3] == '\n' || sentence[3] == '\0'))
+            if(strcmp(sentence, "END\n") == 0 ||
+               strcmp(sentence, "END") == 0)
                 break;
 
             write(fd1, sentence, strlen(sentence));
@@ -103,12 +116,16 @@ int main()
 
         printf("\nResults from Second Process:\n");
 
-        while(read(fd2, result, sizeof(result)-1) > 0)
+        ssize_t n;
+
+        while((n = read(fd2, result, sizeof(result)-1)) > 0)
         {
+            result[n] = '\0';
             printf("%s", result);
         }
 
         close(fd2);
+
         wait(NULL);
 
         unlink("fifo1");
@@ -117,6 +134,7 @@ int main()
 
     return 0;
 }
+
 
 ```
 
