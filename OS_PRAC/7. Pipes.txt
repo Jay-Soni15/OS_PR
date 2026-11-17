@@ -45,7 +45,17 @@ int main()
         close(fd1[1]);
         close(fd2[0]);
 
-        read(fd1[0], filename, sizeof(filename));
+	int i = 0;
+	char ch;
+
+	while(i < sizeof(filename) - 1 &&
+      	read(fd1[0], &ch, 1) > 0 && ch != '\0')
+	{
+    		filename[i++] = ch;
+	}
+
+	filename[i] = '\0';
+
 
         file = open(filename, O_RDONLY);
 
@@ -96,7 +106,6 @@ int main()
 
     return 0;
 }
-
 ```
 
 ### **Compilation and Execution**
