@@ -1,0 +1,243 @@
+# **6. Interprocess Communication (CO5)**
+
+## **1. C Program: Full Duplex Communication Between Two Independent Processes Using FIFOs**
+
+This program demonstrates communication between two independent processes using two named pipes (FIFOs).
+
+- **First Process:** Accepts sentences, writes them into the first FIFO and reads the result from the second FIFO.
+- **Second Process:** Reads sentences, counts characters, words and lines, stores the result in a text file and sends the file contents through the second FIFO.
+
+### **C Program**
+
+Save this program as `fifo.c`.
+
+```
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+int main()
+{
+    int fd1, fd2;
+    char sentence[1000];
+    char result[500];
+    int characters = 0, words = 0, lines = 0;
+    int in_word = 0;
+
+    mkfifo("fifo1", 0666);
+    mkfifo("fifo2", 0666);
+
+    if(fork() == 0)
+    {
+        // Second Process
+        fd1 = open("fifo1", O_RDONLY);
+
+        FILE *fp = fopen("output.txt", "w");
+
+        while(read(fd1, sentence, sizeof(sentence)) > 0)
+        {
+            int len = strlen(sentence);
+
+            characters += len;
+
+            for(int i = 0; i < len; i++)
+            {
+                if(sentence[i] == '\n')
+                    lines++;
+
+                if(sentence[i] == ' ' || sentence[i] == '\n' || sentence[i] == '\t')
+                    in_word = 0;
+                else if(in_word == 0)
+                {
+                    words++;
+                    in_word = 1;
+                }
+            }
+        }
+
+        close(fd1);
+
+        fprintf(fp, "Characters: %d\n", characters);
+        fprintf(fp, "Words: %d\n", words);
+        fprintf(fp, "Lines: %d\n", lines);
+
+        fclose(fp);
+
+        fp = fopen("output.txt", "r");
+        fd2 = open("fifo2", O_WRONLY);
+
+        while(fgets(result, sizeof(result), fp))
+            write(fd2, result, strlen(result));
+
+        close(fd2);
+        fclose(fp);
+
+        exit(0);
+    }
+    else
+    {
+        // First Process
+        fd1 = open("fifo1", O_WRONLY);
+
+        printf("Enter sentences (type END to finish):\n");
+
+        while(1)
+        {
+            fgets(sentence, sizeof(sentence), stdin);
+
+            if(strncmp(sentence, "END", 3) == 0 &&
+               (sentence[3] == '\n' || sentence[3] == '\0'))
+                break;
+
+            write(fd1, sentence, strlen(sentence));
+        }
+
+        close(fd1);
+
+        fd2 = open("fifo2", O_RDONLY);
+
+        printf("\nResults from Second Process:\n");
+
+        while(read(fd2, result, sizeof(result)-1) > 0)
+        {
+            printf("%s", result);
+        }
+
+        close(fd2);
+        wait(NULL);
+
+        unlink("fifo1");
+        unlink("fifo2");
+    }
+
+    return 0;
+}
+
+```
+
+**Note:** Add the following header for the `wait()` function:
+
+```
+#include <sys/wait.h>
+```
+
+### **Compilation and Execution**
+
+```
+gcc fifo.c -o fifo
+./fifo
+```
+
+### **Sample Input**
+
+```
+Enter sentences (type END to finish):
+
+Operating System
+Interprocess Communication
+Named Pipes
+
+END
+```
+
+### **Sample Output**
+
+```
+Results from Second Process:
+
+Characters: 57
+Words: 7
+Lines: 3
+```
+
+*The character count includes spaces and newline characters. The END command is not included.*
+
+## **2. Practical Write-up**
+
+**1. Title:**
+
+Implementation of Full Duplex Communication Between Two Independent Processes Using FIFOs.
+
+**2. Aim:**
+
+To implement full duplex communication between two processes using named pipes (FIFOs) and calculate the number of characters, words and lines in given sentences.
+
+**3. Objectives:**
+
+1. To understand the concept of Interprocess Communication (IPC).
+2. To implement communication using named pipes (FIFOs).
+3. To perform data transfer between two independent processes.
+4. To count characters, words and lines and store the results in a text file.
+
+**4. Theory:**
+
+Interprocess Communication (IPC) is a mechanism provided by an operating system that allows two or more processes to exchange data and communicate with each other.
+
+A **FIFO (First In First Out)** is a named pipe used for communication between independent processes. Data written first is read first. Unlike ordinary pipes, FIFOs can be accessed by processes that are not necessarily related.
+
+In this program, two FIFOs are used to achieve full duplex communication.
+
+**1. FIFO (Named Pipe):**
+
+A FIFO is a special file used to transfer data between processes. It allows one process to write data while another process reads it.
+
+**2. Full Duplex Communication:**
+
+Full duplex communication allows data to flow in both directions between two processes. In this program, two separate FIFOs are used:
+
+- FIFO1: First process sends sentences to the second process.
+- FIFO2: Second process sends the calculated results back to the first process.
+
+**3. Important System Calls and Functions:**
+
+| Function   | Purpose                                   |
+| ---------- | ----------------------------------------- |
+| `mkfifo()` | Creates a named pipe.                     |
+| `open()`   | Opens a FIFO for reading or writing.      |
+| `read()`   | Reads data from a FIFO.                   |
+| `write()`  | Writes data into a FIFO.                  |
+| `close()`  | Closes an opened FIFO.                    |
+| `unlink()` | Removes the FIFO file.                    |
+| `fork()`   | Creates a child process.                  |
+| `wait()`   | Waits for the child process to terminate. |
+
+**Important Syntax:**
+
+Creating a FIFO:
+
+```
+mkfifo("fifo1", 0666);
+```
+
+Opening a FIFO:
+
+```
+fd = open("fifo1", O_RDONLY);
+```
+
+Reading and writing:
+
+```
+read(fd, buffer, sizeof(buffer));
+write(fd, buffer, strlen(buffer));
+```
+
+**Working of the Program:**
+
+1. Two named pipes, FIFO1 and FIFO2, are created.
+2. The first process accepts sentences from the user.
+3. The first process sends the sentences through FIFO1.
+4. The second process reads the sentences and calculates characters, words and lines.
+5. The calculated results are stored in `output.txt`.
+6. The second process sends the file contents through FIFO2.
+7. The first process reads and displays the results on standard output.
+
+**5. Conclusion:**
+
+Thus, full duplex communication between two processes was successfully implemented using FIFOs. The program calculates the number of characters, words and lines, stores the results in a text file and transfers them back to the first process.
+
+**Important:** This is a two-FIFO demonstration using a parent and child process. For a strictly independent-process implementation, the two programs can instead be compiled and executed separately.

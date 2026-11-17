@@ -1,0 +1,238 @@
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+void sort(int a[], int n)
+{
+    int i, j, temp;
+
+    for(i = 0; i < n-1; i++)
+    {
+        for(j = 0; j < n-i-1; j++)
+        {
+            if(a[j] > a[j+1])
+            {
+                temp = a[j];
+                a[j] = a[j+1];
+                a[j+1] = temp;
+            }
+        }
+    }
+}
+
+void display(int a[], int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        printf("%d ", a[i]);
+    printf("\n");
+}
+
+int main()
+{
+    int a[50], n, i;
+    pid_t pid;
+
+    printf("Enter number of integers: ");
+    scanf("%d", &n);
+
+    printf("Enter integers:\n");
+    for(i = 0; i < n; i++)
+        scanf("%d", &a[i]);
+
+    pid = fork();
+
+    if(pid < 0)
+    {
+        printf("Fork failed.\n");
+        exit(1);
+    }
+
+    else if(pid == 0)
+    {
+        printf("\nChild Process\n");
+        printf("Child PID: %d\n", getpid());
+
+        sort(a, n);
+
+        printf("Sorted array by child: ");
+        display(a, n);
+
+        printf("Child process completed.\n");
+        exit(0);
+    }
+
+    else
+    {
+        printf("\nParent Process\n");
+        printf("Parent PID: %d\n", getpid());
+
+        sort(a, n);
+
+        printf("Sorted array by parent: ");
+        display(a, n);
+
+        wait(NULL);
+
+        printf("Parent: Child process completed.\n");
+    }
+
+    return 0;
+}
+
+```
+
+## **2. Program to Demonstrate Zombie Process**
+
+A zombie process is a process that has completed execution, but its parent has not yet collected its exit status using `wait()`.
+
+```
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main()
+{
+    pid_t pid = fork();
+
+    if(pid == 0)
+    {
+        printf("Child process terminated.\n");
+        exit(0);
+    }
+    else if(pid > 0)
+    {
+        printf("Parent PID: %d\n", getpid());
+        printf("Child PID: %d\n", pid);
+        printf("Zombie state can be observed now.\n");
+
+        sleep(20);
+        printf("Parent exiting.\n");
+    }
+
+    return 0;
+}
+
+```
+
+**To observe zombie state:**
+
+Run the program in one terminal and quickly execute in another terminal:
+
+```
+ps -el | grep Z
+```
+
+The child process may appear with state `Z` during the parent's 20-second sleep.
+
+## **3. Program to Demonstrate Orphan Process**
+
+An orphan process is a child process whose parent terminates before the child process finishes execution. It is adopted by the system's init process or another subreaper.
+
+```
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main()
+{
+    pid_t pid = fork();
+
+    if(pid == 0)
+    {
+        printf("Child process started.\n");
+        printf("Original Parent PID: %d\n", getppid());
+
+        sleep(5);
+
+        printf("Child is now an orphan.\n");
+        printf("New Parent PID: %d\n", getppid());
+    }
+    else if(pid > 0)
+    {
+        printf("Parent process started.\n");
+        printf("Parent PID: %d\n", getpid());
+
+        sleep(2);
+        printf("Parent process exiting.\n");
+        exit(0);
+    }
+
+    return 0;
+}
+
+```
+
+## **4. Practical Write-up**
+
+**1. Title:**
+
+Demonstration of FORK and WAIT System Calls Along with Zombie and Orphan Processes.
+
+**2. Aim:**
+
+To implement process management using `fork()` and `wait()` system calls and demonstrate zombie and orphan processes in C.
+
+**3. Objectives:**
+
+1. To understand process creation using the `fork()` system call.
+2. To implement process synchronization using the `wait()` system call.
+3. To understand the concept and behaviour of zombie processes.
+4. To understand the concept and behaviour of orphan processes.
+
+**4. Theory:**
+
+Process management is an important function of an operating system that handles the creation, execution and termination of processes. In Linux, system calls are used to perform process-related operations.
+
+**1. fork() System Call:**
+
+The `fork()` system call creates a new process called the child process from the existing parent process. Both processes execute independently.
+
+Syntax:
+
+```
+pid_t pid = fork();
+```
+
+Return values:
+
+- `0` – Returned to the child process.
+- Positive value – Returned to the parent process (child PID).
+- `-1` – Process creation failed.
+
+**2. wait() System Call:**
+
+The `wait()` system call makes the parent process wait until one of its child processes terminates. It helps in process synchronization and collecting the child's exit status.
+
+Syntax:
+
+```
+wait(NULL);
+```
+
+**3. Zombie Process:**
+
+A zombie process is a process that has completed its execution, but its parent has not collected its termination status using `wait()`. It remains in the process table until its exit status is collected.
+
+**4. Orphan Process:**
+
+An orphan process is a child process whose parent terminates before the child completes execution. The orphan process is adopted by the init process (PID 1) or another system subreaper.
+
+**5. Sorting Algorithm:**
+
+The program uses the Bubble Sort algorithm to arrange integers in ascending order. It repeatedly compares adjacent elements and swaps them if they are in the wrong order.
+
+**5. Conclusion:**
+
+Thus, process management was successfully implemented using `fork()` and `wait()` system calls. The creation of parent and child processes and the concepts of zombie and orphan processes were demonstrated successfully.
+
+
+```
+gcc process.c -o process
+./process
+```

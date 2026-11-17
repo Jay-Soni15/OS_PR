@@ -1,0 +1,202 @@
+
+
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+
+#define SIZE 5
+
+int buffer[SIZE];
+int in = 0, out = 0;
+
+sem_t empty, full;
+pthread_mutex_t mutex;
+
+void *producer(void *arg)
+{
+    int item;
+
+    for(item = 1; item <= 10; item++)
+    {
+        sem_wait(&empty);
+        pthread_mutex_lock(&mutex);
+
+        buffer[in] = item;
+        printf("Producer produced: %d\n", item);
+        in = (in + 1) % SIZE;
+
+        pthread_mutex_unlock(&mutex);
+        sem_post(&full);
+
+        sleep(1);
+    }
+
+    return NULL;
+}
+
+void *consumer(void *arg)
+{
+    int item;
+
+    for(int i = 1; i <= 10; i++)
+    {
+        sem_wait(&full);
+        pthread_mutex_lock(&mutex);
+
+        item = buffer[out];
+        printf("Consumer consumed: %d\n", item);
+        out = (out + 1) % SIZE;
+
+        pthread_mutex_unlock(&mutex);
+        sem_post(&empty);
+
+        sleep(2);
+    }
+
+    return NULL;
+}
+
+int main()
+{
+    pthread_t p, c;
+
+    sem_init(&empty, 0, SIZE);
+    sem_init(&full, 0, 0);
+    pthread_mutex_init(&mutex, NULL);
+
+    pthread_create(&p, NULL, producer, NULL);
+    pthread_create(&c, NULL, consumer, NULL);
+
+    pthread_join(p, NULL);
+    pthread_join(c, NULL);
+
+    sem_destroy(&empty);
+    sem_destroy(&full);
+    pthread_mutex_destroy(&mutex);
+
+    return 0;
+}
+
+```
+
+### **Compilation and Execution**
+
+Save the program as `producer.c`.
+
+```
+gcc producer.c -o producer -pthread
+./producer
+```
+
+### **Sample Output**
+
+```
+Producer produced: 1
+Consumer consumed: 1
+Producer produced: 2
+Producer produced: 3
+Consumer consumed: 2
+Producer produced: 4
+Consumer consumed: 3
+Producer produced: 5
+Producer produced: 6
+Consumer consumed: 4
+Producer produced: 7
+Consumer consumed: 5
+Producer produced: 8
+Producer produced: 9
+Consumer consumed: 6
+Producer produced: 10
+Consumer consumed: 7
+Consumer consumed: 8
+Consumer consumed: 9
+Consumer consumed: 10
+```
+
+*Note: The exact output order may vary depending on thread scheduling.*
+
+## **2. Practical Write-up**
+
+**1. Title:**
+
+Implementation of Producer-Consumer Problem Using Counting Semaphores and Mutex.
+
+**2. Aim:**
+
+To implement thread synchronization using counting semaphores and mutual exclusion using mutex by solving the Producer-Consumer problem.
+
+**3. Objectives:**
+
+1. To understand the concept of threads and thread synchronization.
+2. To implement counting semaphores in C programming.
+3. To understand mutual exclusion using mutex locks.
+4. To solve the Producer-Consumer problem using synchronization techniques.
+
+**4. Theory:**
+
+Thread synchronization is a mechanism used to coordinate multiple threads accessing shared resources. It prevents data inconsistency and race conditions when multiple threads execute simultaneously.
+
+The Producer-Consumer problem is a classical synchronization problem in operating systems. It consists of two threads: Producer and Consumer.
+
+- **Producer:** Generates items and inserts them into a shared buffer.
+- **Consumer:** Removes items from the shared buffer and consumes them.
+- **Buffer:** A shared memory area used to store produced items.
+
+Two synchronization mechanisms are used:
+
+**1. Counting Semaphore:**
+
+A counting semaphore is used to control access to a resource with a limited number of available slots. It maintains a counter to track available resources.
+
+In this program, two semaphores are used:
+
+- `empty`: Counts the empty buffer slots. Initially set to 5.
+- `full`: Counts the filled buffer slots. Initially set to 0.
+
+Syntax:
+
+```
+sem_init(&sem, 0, value);
+sem_wait(&sem);
+sem_post(&sem);
+```
+
+**2. Mutex (Mutual Exclusion):**
+
+A mutex is a locking mechanism that ensures only one thread accesses a shared resource at a time. It prevents race conditions while modifying the shared buffer.
+
+Syntax:
+
+```
+pthread_mutex_lock(&mutex);
+
+/* Critical Section */
+
+pthread_mutex_unlock(&mutex);
+```
+
+**3. Thread Creation and Joining:**
+
+- `pthread_create()` creates a new thread.
+- `pthread_join()` waits for a thread to complete execution.
+
+Syntax:
+
+```
+pthread_create(&thread, NULL, function, NULL);
+pthread_join(thread, NULL);
+```
+
+**Working of the Program:**
+
+1. Initialize the empty and full semaphores and mutex.
+2. Create producer and consumer threads.
+3. Producer waits for an empty slot and inserts an item into the buffer.
+4. Consumer waits for a filled slot and removes an item.
+5. Mutex ensures that only one thread accesses the buffer at a time.
+6. Both threads terminate after completing their operations.
+
+**5. Conclusion:**
+
+Thus, the Producer-Consumer problem was successfully implemented using counting semaphores and mutex in C. Thread synchronization and mutual exclusion were demonstrated successfully.

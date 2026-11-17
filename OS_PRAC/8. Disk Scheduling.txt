@@ -1,0 +1,284 @@
+# **8. Disk Scheduling (CO5)**
+
+## **1. C Program: Disk Scheduling Algorithms – SSTF, SCAN and C-LOOK**
+
+Disk scheduling algorithms determine the order in which disk I/O requests are serviced to reduce seek time and improve disk performance.
+
+This program implements:
+
+1. **SSTF (Shortest Seek Time First)**
+2. **SCAN (Elevator Algorithm)**
+3. **C-LOOK (Circular LOOK)**
+
+**Assumption:** The initial disk head moves away from the spindle, i.e. towards the higher-numbered cylinders.
+
+```
+
+#include <stdio.h>
+#include <stdlib.h>
+
+void sstf(int req[], int n, int head)
+{
+    int visited[100] = {0};
+    int total = 0, current = head;
+
+    printf("\nSSTF Sequence: %d", head);
+
+    for(int i = 0; i < n; i++)
+    {
+        int min = 9999, index = -1;
+
+        for(int j = 0; j < n; j++)
+        {
+            if(!visited[j] && abs(current - req[j]) < min)
+            {
+                min = abs(current - req[j]);
+                index = j;
+            }
+        }
+
+        visited[index] = 1;
+        total += abs(current - req[index]);
+        current = req[index];
+
+        printf(" -> %d", current);
+    }
+
+    printf("\nTotal Seek Operations: %d\n", total);
+}
+
+void scan(int req[], int n, int head, int disk)
+{
+    int a[100], total = 0, current = head;
+    int count = 0;
+
+    for(int i = 0; i < n; i++)
+        a[i] = req[i];
+
+    a[n++] = head;
+
+    for(int i = 0; i < n; i++)
+        for(int j = i + 1; j < n; j++)
+            if(a[i] > a[j])
+            {
+                int t = a[i];
+                a[i] = a[j];
+                a[j] = t;
+            }
+
+    while(count < n && a[count] < head)
+        count++;
+
+    printf("\nSCAN Sequence: %d", head);
+
+    for(int i = count; i < n; i++)
+    {
+        total += abs(current - a[i]);
+        current = a[i];
+        if(a[i] != head)
+            printf(" -> %d", a[i]);
+    }
+
+    total += abs(current - (disk - 1));
+    current = disk - 1;
+    printf(" -> %d", current);
+
+    for(int i = count - 1; i >= 0; i--)
+    {
+        total += abs(current - a[i]);
+        current = a[i];
+
+        if(a[i] != head)
+            printf(" -> %d", a[i]);
+    }
+
+    printf("\nTotal Seek Operations: %d\n", total);
+}
+
+void clook(int req[], int n, int head)
+{
+    int a[100], total = 0, current = head;
+    int count = 0;
+
+    for(int i = 0; i < n; i++)
+        a[i] = req[i];
+
+    for(int i = 0; i < n; i++)
+        for(int j = i + 1; j < n; j++)
+            if(a[i] > a[j])
+            {
+                int t = a[i];
+                a[i] = a[j];
+                a[j] = t;
+            }
+
+    while(count < n && a[count] < head)
+        count++;
+
+    printf("\nC-LOOK Sequence: %d", head);
+
+    for(int i = count; i < n; i++)
+    {
+        total += abs(current - a[i]);
+        current = a[i];
+        printf(" -> %d", current);
+    }
+
+    if(count > 0)
+    {
+        total += abs(current - a[0]);
+        current = a[0];
+        printf(" -> %d", current);
+
+        for(int i = 1; i < count; i++)
+        {
+            total += abs(current - a[i]);
+            current = a[i];
+            printf(" -> %d", current);
+        }
+    }
+
+    printf("\nTotal Seek Operations: %d\n", total);
+}
+
+int main()
+{
+    int n, head, disk;
+    int req[100];
+
+    printf("Enter number of disk requests: ");
+    scanf("%d", &n);
+
+    printf("Enter disk request sequence:\n");
+    for(int i = 0; i < n; i++)
+        scanf("%d", &req[i]);
+
+    printf("Enter initial head position: ");
+    scanf("%d", &head);
+
+    printf("Enter total number of cylinders: ");
+    scanf("%d", &disk);
+
+    if(n < 1 || n > 100 || disk < 1 ||
+       head < 0 || head >= disk)
+    {
+        printf("Invalid input.\n");
+        return 1;
+    }
+
+    for(int i = 0; i < n; i++)
+    {
+        if(req[i] < 0 || req[i] >= disk)
+        {
+            printf("Invalid request position.\n");
+            return 1;
+        }
+    }
+
+    sstf(req, n, head);
+    scan(req, n, head, disk);
+    clook(req, n, head);
+
+    return 0;
+}
+
+```
+
+## **2. Sample Input**
+
+```
+Enter number of disk requests: 8
+
+Enter disk request sequence:
+98 183 37 122 14 124 65 67
+
+Enter initial head position: 53
+
+Enter total number of cylinders: 200
+```
+
+## **3. Sample Output**
+
+```
+SSTF Sequence: 53 -> 65 -> 67 -> 37 -> 14 -> 98 -> 122 -> 124 -> 183
+Total Seek Operations: 236
+
+SCAN Sequence: 53 -> 65 -> 67 -> 98 -> 122 -> 124 -> 183 -> 199 -> 37 -> 14
+Total Seek Operations: 331
+
+C-LOOK Sequence: 53 -> 65 -> 67 -> 98 -> 122 -> 124 -> 183 -> 14 -> 37
+Total Seek Operations: 322
+```
+
+Note: SCAN goes to the last cylinder (199) before reversing. C-LOOK jumps directly from the highest requested cylinder to the lowest requested cylinder.
+
+## **4. Compilation and Execution**
+
+Save the program as `disk.c`.
+
+```
+gcc disk.c -o disk
+./disk
+```
+
+## **5. Practical Write-up**
+
+**1. Title:**
+
+Implementation of Disk Scheduling Algorithms – SSTF, SCAN and C-LOOK.
+
+**2. Aim:**
+
+To implement SSTF, SCAN and C-LOOK disk scheduling algorithms in C and calculate the total head movement.
+
+**3. Objectives:**
+
+1. To understand disk scheduling techniques.
+2. To implement SSTF disk scheduling algorithm.
+3. To implement SCAN and C-LOOK disk scheduling algorithms.
+4. To calculate and compare total disk head movements.
+
+**4. Theory:**
+
+Disk scheduling is an operating system technique used to determine the order in which disk I/O requests are processed. Its main purpose is to reduce disk head movement, minimize seek time and improve system performance.
+
+**1. SSTF (Shortest Seek Time First):**
+
+SSTF selects the disk request that is closest to the current head position. It reduces average seek time but may cause starvation for requests located far away.
+
+Formula:
+
+\\[ Seek = |Current\ Head - Requested\ Track| \\]
+
+**2. SCAN (Elevator Algorithm):**
+
+In SCAN, the disk head moves in one direction and services all requests along its path. It reaches the last cylinder in that direction and then reverses its direction to service remaining requests.
+
+**3. C-LOOK (Circular LOOK):**
+
+C-LOOK moves in only one direction while servicing requests. After reaching the highest requested cylinder, it jumps directly to the lowest requested cylinder and continues servicing requests in the same direction. It does not travel to the physical end of the disk.
+
+**Important Functions Used:**
+
+| Function   | Purpose                         |
+| ---------- | ------------------------------- |
+| `scanf()`  | Accepts input from the user.    |
+| `printf()` | Displays output.                |
+| `abs()`    | Calculates absolute difference. |
+| `for`      | Repeats statements.             |
+| `if`       | Checks conditions.              |
+
+**Working of the Program:**
+
+1. Accept the number of disk requests.
+2. Accept the disk request sequence and initial head position.
+3. Apply SSTF to select the nearest request.
+4. Apply SCAN to service requests while moving towards higher cylinders and then reverse.
+5. Apply C-LOOK to service higher requests and circularly jump to the lowest request.
+6. Calculate and display the total head movement for each algorithm.
+
+**5. Conclusion:**
+
+Thus, SSTF, SCAN and C-LOOK disk scheduling algorithms were successfully implemented in C. The total head movement for each algorithm was calculated and compared to understand their working and performance.
+
+**Important viva point:** In this practical, the initial head direction is towards higher-numbered cylinders (away from the spindle). SSTF does not use a fixed direction; it always selects the nearest request.
