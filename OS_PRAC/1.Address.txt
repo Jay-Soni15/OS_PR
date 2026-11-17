@@ -109,6 +109,9 @@ do
 done
 
 
+chmod +x addressbook.sh
+./addressbook.sh
+
 
 1. Title:
 
