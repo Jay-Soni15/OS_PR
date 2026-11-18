@@ -17,16 +17,16 @@ void *philosopher(void *num)
 
     sem_wait(&room);
 
-    sem_wait(&fork[id]);
-    sem_wait(&fork[(id + 1) % N]);
+    sem_wait(&fork[id - 1]);
+    sem_wait(&fork[id % N]);
 
     printf("Philosopher %d is eating\n", id);
     sleep(2);
 
     printf("Philosopher %d finished eating\n", id);
 
-    sem_post(&fork[id]);
-    sem_post(&fork[(id + 1) % N]);
+    sem_post(&fork[id - 1]);
+    sem_post(&fork[id % N]);
 
     sem_post(&room);
 
